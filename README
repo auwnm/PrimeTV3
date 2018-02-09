@@ -1,0 +1,16 @@
+PrimeTV3 : A visualization tool for drawing ordered reconciliation heat map for phylogenetic trees
+
+Version 0.1.0 (Alpha)
+
+/*********************************************************************/
+
+This is a new updated and customized version of reconciliation viewer, primetv published on:
+
+http://www.biomedcentral.com/1471-2105/8/148
+
+The program takes as input a guest tree, a host tree (Newick file format) and a leave mapping between them and as output, it produces tree-within-tree illustration of the most parsimonious reconciliation. It can output heat map visualization of the guest tree based on its clade posterior probabilities and layout it as a reconciliation heat map.
+
+The novel contribution lies in an algorithm which recursively computes the order of guest tree nodes by calling the order of its children nodes until the base case i.e., given order of the guest tree leaves (for example, gene or domain order information).
+
+The program is currently under development ...
+
