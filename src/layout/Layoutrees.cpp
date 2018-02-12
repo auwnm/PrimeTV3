@@ -1236,7 +1236,17 @@ LayoutTrees::getParentCoordinate(Node* u, Node *x)
     }
   else
     {
-      return getParentCoordinate(u->getParent(), x);
+      if(u->isRoot())
+	{
+	  vector<double> ret;
+	  ret.push_back(-1);
+	  ret.push_back(x->getY() - NodeHeight/2);
+	  return ret;
+	}
+      else
+	{
+	  return getParentCoordinate(u->getParent(), x);
+	}
       // ostringstream oss;
       // oss << "Error: getParentCoordinate(guest Node " << u->getNumber() << ", host Node " << x-> << ")\n"
       // 	  << "u is not in gamma of x!";
