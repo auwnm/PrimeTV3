@@ -22,7 +22,7 @@
 #ifndef TESTSUITE_H
 #define TESTSUITE_H
 
-#include <QObject>
+##include <QObject>
 
 namespace unit
 {

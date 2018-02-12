@@ -39,9 +39,9 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <QApplication>
+//#include <QApplication>
 
-#include "gui/Windows.h"
+//#include "gui/Windows.h"
 
 #include "options_cmake.h"
 
@@ -470,13 +470,13 @@ main (int ac, char *av[])
         mainops->start();
         mainops->setParameters(parameters);
 
-        if((bool)(parameters->UI)) //We start the User Interface
+        if(false) //(bool)(parameters->UI)) //We start the User Interface
         {
-            QApplication app(ac, av);
-            MainWindow *appWindow = new MainWindow(parameters,mainops);
-            appWindow->show();
-            return app.exec();
-            delete appWindow;
+            // QApplication app(ac, av);
+            // MainWindow *appWindow = new MainWindow(parameters,mainops);
+            // appWindow->show();
+            // return app.exec();
+            // delete appWindow;
         }
         else // We start the script version
         {
@@ -487,10 +487,10 @@ main (int ac, char *av[])
                 mainops->OpenHost(speciestree);
 	    }
             else
-            {
+	      {std::cerr << "reconcile\n";
                 mainops->reconcileTrees(genetree,speciestree,mapfile);
             }
- 
+	    
             //we calculate the LGT scenarios is indicated
             if((bool)(parameters->lattransfer))
             {
@@ -501,7 +501,7 @@ main (int ac, char *av[])
 		             
 		mainops->loadPreComputedScenario(precomputed_scenario_file,mapfile);
             }
-
+	    
             if(parameters->drawAll)
             {
                 mainops->drawAllLGT();
@@ -515,8 +515,8 @@ main (int ac, char *av[])
             {
                 mainops->printLGT();
             }
-
-            std::cout << "The tree/s were generated succesfully" << std::endl;
+	    
+            std::cerr << "The tree/s were generated succesfully" << std::endl;
 
         }
     }

@@ -4,14 +4,14 @@ MACRO(INITIALISE_PROJECT)
     SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
     # Required packages
-    find_package(Qt5Widgets REQUIRED)
+#    find_package(Qt5Widgets REQUIRED)
     # Keep track of some information about Qt
-    SET(QT_BINARY_DIR ${_qt5Widgets_install_prefix}/bin)
-    SET(QT_LIBRARY_DIR ${_qt5Widgets_install_prefix}/lib)
-    SET(QT_PLUGINS_DIR ${_qt5Widgets_install_prefix}/plugins)
-    SET(QT_VERSION_MAJOR ${Qt5Widgets_VERSION_MAJOR})
-    SET(QT_VERSION_MINOR ${Qt5Widgets_VERSION_MINOR})
-    SET(QT_VERSION_PATCH ${Qt5Widgets_VERSION_PATCH})
+#    SET(QT_BINARY_DIR ${_qt5Widgets_install_prefix}/bin)
+#    SET(QT_LIBRARY_DIR ${_qt5Widgets_install_prefix}/lib)
+#    SET(QT_PLUGINS_DIR ${_qt5Widgets_install_prefix}/plugins)
+#    SET(QT_VERSION_MAJOR ${Qt5Widgets_VERSION_MAJOR})
+#    SET(QT_VERSION_MINOR ${Qt5Widgets_VERSION_MINOR})
+#    SET(QT_VERSION_PATCH ${Qt5Widgets_VERSION_PATCH})
     
     # Some settings which depend on whether we want a debug or release version
     # of stVi
@@ -31,7 +31,7 @@ MACRO(INITIALISE_PROJECT)
             SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
         ENDIF()
         # Make sure that debugging is on for Qt
-        ADD_DEFINITIONS(-DQT_DEBUG)
+#        ADD_DEFINITIONS(-DQT_DEBUG)
     ELSE()
         MESSAGE("Building a release version...")
         set(DEBUG_MODE OFF)
@@ -42,8 +42,8 @@ MACRO(INITIALISE_PROJECT)
             SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -ffast-math")
         ENDIF()
         # Make sure that debugging is off for Qt
-        ADD_DEFINITIONS(-DQT_NO_DEBUG_OUTPUT)
-        ADD_DEFINITIONS(-DQT_NO_DEBUG)
+#        ADD_DEFINITIONS(-DQT_NO_DEBUG_OUTPUT)
+#        ADD_DEFINITIONS(-DQT_NO_DEBUG)
     ENDIF()
 
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG -DDEBUG")
@@ -57,7 +57,7 @@ MACRO(INITIALISE_PROJECT)
         #TODO
     ELSE()
         IF(TREAT_WARNINGS_AS_ERRORS)
-            SET(WARNING_ERROR "-Werror")
+            #SET(WARNING_ERROR "-Werror")
         ENDIF(TREAT_WARNINGS_AS_ERRORS)
         SET(DISABLED_WARNINGS "-Wno-multichar -Wno-unused-variable -Wno-unused-function -Wno-return-type -Wno-switch")
         SET(DISABLED_WARNINGS_DEBUG "-Wno-unused-variable -Wno-unused-function")
@@ -65,6 +65,8 @@ MACRO(INITIALISE_PROJECT)
 
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS} ${WARNING_ERROR}")
     SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${DISABLED_WARNINGS_DEBUG}")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_WARNINGS_C} ${DISABLED_WARNINGS} ${WARNING_ERROR}")
+    SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${EXTRA_WARNINGS_C} ${DISABLED_WARNINGS_DEBUG} ${WARNING_ERROR}")
 
     # Ask for Unicode to be used
     ADD_DEFINITIONS(-DUNICODE)
@@ -89,27 +91,32 @@ MACRO(INITIALISE_PROJECT)
         message(FATAL_ERROR "Your compiler does not support c++11, UPDATE!!")
     endif()
 
-    if(APPLE)
-        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.7 -stdlib=libc++")
-        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mmacosx-version-min=10.7 -stdlib=libc++")
+    if(APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        set(CMAKE_XCODE_ATTRIBUTE_GCC_VERSION "com.apple.compilers.llvm.clang.1_0")
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++0x")
+        set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.7 -stdlib=libc++")
+        set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -mmacosx-version-min=10.7 -stdlib=libc++")
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.13 -stdlib=libc++")
+        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mmacosx-version-min=10.13 -stdlib=libc++")
     endif()
 
 ENDMACRO()
 
-MACRO(use_qt5lib qt5lib)
-    find_package(${qt5lib} REQUIRED)
-    include_directories(${${qt5lib}_INCLUDE_DIRS})
-    add_definitions(${${qt5lib}_DEFINITIONS})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt5lib}_EXECUTABLE_COMPILE_FLAGS}")
-ENDMACRO()
+#MACRO(use_qt5lib qt5lib)
+#    find_package(${qt5lib} REQUIRED)
+#    include_directories(${${qt5lib}_INCLUDE_DIRS})
+#    add_definitions(${${qt5lib}_DEFINITIONS})
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt5lib}_EXECUTABLE_COMPILE_FLAGS}")
+#ENDMACRO()
 
-MACRO(LINUX_DEPLOY_QT_PLUGIN PLUGIN_CATEGORY)
-    FOREACH(PLUGIN_NAME ${ARGN})
-        # Deploy the Qt plugin itself
-        INSTALL(FILES ${QT_PLUGINS_DIR}/${PLUGIN_CATEGORY}/${CMAKE_SHARED_LIBRARY_PREFIX}${PLUGIN_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
-                DESTINATION plugins/${PLUGIN_CATEGORY})
-    ENDFOREACH()
-ENDMACRO()
+#MACRO(LINUX_DEPLOY_QT_PLUGIN PLUGIN_CATEGORY)
+#    FOREACH(PLUGIN_NAME ${ARGN})
+#        # Deploy the Qt plugin itself
+#        INSTALL(FILES ${QT_PLUGINS_DIR}/${PLUGIN_CATEGORY}/${CMAKE_SHARED_LIBRARY_PREFIX}${PLUGIN_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}
+#                DESTINATION plugins/${PLUGIN_CATEGORY})
+#    ENDFOREACH()
+#ENDMACRO()
 
 MACRO(PROJECT_GROUP TARGET_NAME FOLDER_PATH)
     #Organize projects into folders

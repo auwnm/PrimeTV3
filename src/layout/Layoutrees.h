@@ -89,7 +89,7 @@ private:
     
     /* this function calculates the gene cordinates according to the species node cordinates calculated
      * previously */
-    void CountGeneCoordinates(Node *n);
+    void CountGeneCoordinates(Node *n, std::vector<Node*>& remainder);
     
     /* this function assigns a leaf gene or species node its cordinates, the positions will depend of the number
      * of nodes mapped to the species nodes where the node is being positioned on */
@@ -126,8 +126,9 @@ private:
     /* int  getPlace (Node* x, Node *u); */
     std::vector<int>  getPlace (Node* x, Node *u);
 
+    float intRatio(int x, int y);
     std::vector<int> intersectChildPlaces(std::vector<int> lpos, std::vector<int> rpos);
-    void downwardPlaces(Node* u, Node* x, int prev);
+    void downwardPlaces(Node* u, Node* x, std::vector<int> prev);
      
 
     int getLeafPositionOnGene(const string &leafName); 
@@ -148,14 +149,14 @@ private:
     
     /* this function returns the right most cordiante node for a duplication
      * node given as input */
-    double RightMostCoordinate(Node* o, Node *end_of_slice, int duplevel);
+    std::vector<double>  RightMostCoordinate(Node* o, Node *end_of_slice, int duplevel);
     
     /* the same for the left*/
-    double LeftMostCoordinate(Node* o, Node *end_of_slice, int duplevel);
+    std::vector<double>  LeftMostCoordinate(Node* o, Node *end_of_slice, int duplevel);
 
     // NEW
     // Helper for LeftMostCoordinate and RightMostCoordinate
-    double getYforLosses(Node* u, Node *x);
+    std::vector<double>  getYforLosses(Node* u, Node *x);
 
     // This should return the y-coordinate of u or the closest left-most child of u mapping at vertex x
     double getLeftMostChildPlace(Node* u, Node *x);
@@ -163,6 +164,7 @@ private:
     double getRightMostChildPlace(Node* u, Node *x);
     // This should return the y-coordinate of u or the closest parent of u mapping at vertex x
     double getParentPlace(Node* u, Node *x);
+    std::vector<double> getParentCoordinate(Node* u, Node *x);
 
     // end NEW
     

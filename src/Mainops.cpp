@@ -41,12 +41,12 @@ using namespace std;
 Mainops::Mainops()
     :Guest(0),Host(0),gamma(0),lambdamap(0),dt(0),parameters(0),io(0)
 {
-	std::cout << "1) Mainops constructor called" << std::endl;
+	std::cerr << "1) Mainops constructor called" << std::endl;
 }
 
 void Mainops::start()
 {
-    std::cout << "2) Mainops start called" << std::endl;
+    std::cerr << "2) Mainops start called" << std::endl;
     io = new TreeIO();
     dt = new DrawTreeCairo();
 }
@@ -121,6 +121,8 @@ Mainops::~Mainops()
 
 bool Mainops::lateralTransfer(const std::string &mapname, bool dp)
 {
+    std::cerr << "XXX Mainops loadPreComputedScenariolateralTransfer called" << std::endl;	
+
     Phyltr late = Phyltr();
     late.g_input.duplication_cost = parameters->lateralduplicost;
     late.g_input.transfer_cost = parameters->lateraltrancost;
@@ -173,16 +175,17 @@ bool Mainops::lateralTransfer(const std::string &mapname, bool dp)
 
 void Mainops::printLGT()
 {
-    std::cout << "List of computed LGT scenarios sorted by cost.." << std::endl;
+    std::cerr << "List of computed LGT scenarios sorted by cost.." << std::endl;
     BOOST_FOREACH(Scenario &sc, scenarios)
     {
-        std::cout << sc << std::endl;
+        std::cerr << sc << std::endl;
     }
 }
 
 bool Mainops::thereAreLGT(const std::vector<Scenario> &scenarios) const
 {
-    BOOST_FOREACH(const Scenario &sc, scenarios)
+     std::cerr << "XXX Mainops thereAreLGT called" << std::endl;	
+   BOOST_FOREACH(const Scenario &sc, scenarios)
     {
         if(sc.transfer_edges.any())
         {
@@ -194,12 +197,14 @@ bool Mainops::thereAreLGT(const std::vector<Scenario> &scenarios) const
 
 void Mainops::OpenReconciled(const string &reconciled)
 {
+     std::cerr << "XXX Mainops OpenReconciled called" << std::endl;	
     io->setSourceFile(reconciled);
     Guest = new TreeExtended(io->readBeepTree<TreeExtended,Node>(&AC, &gs));
 }
 
 void Mainops::OpenHost(const string &species)
 {    
+     std::cerr << "XXX Mainops OpenHost called" << std::endl;	
     io->setSourceFile(species);
     Host = new TreeExtended(io->readHostTree<TreeExtended,Node>());
     Node *root = Host->getRootNode();
@@ -221,6 +226,8 @@ void Mainops::OpenHost(const string &species)
 
 void Mainops::CalculateGamma()
 {
+     std::cerr << "XXX CalculateGamma OpenHost called" << std::endl;	
+  
     if (parameters->do_not_draw_species_tree == false)
     {
         gamma = new GammaMapEx<Node>(*Guest, *Host, gs, AC);
@@ -243,7 +250,7 @@ void Mainops::CalculateGamma()
 
 void Mainops::reconcileTrees(const string &gene, const string &species, const string &mapfile)
 {
-    std::cout << "3) Mainops reconcileTrees called" << std::endl;	
+    std::cerr << "3) Mainops reconcileTrees called" << std::endl;	
     io->setSourceFile(gene);
     Guest = new TreeExtended(io->readBeepTree<TreeExtended,Node>(&AC, &gs));
     io->setSourceFile(species);
@@ -261,7 +268,7 @@ void Mainops::reconcileTrees(const string &gene, const string &species, const st
     
     /*
     for(std::vector<std::string>::iterator it = insertOrder.begin(); it != insertOrder.end(); ++it) {
-       std::cout << *it << endl;
+       std::cerr << *it << endl;
     }
     */
     
@@ -269,20 +276,20 @@ void Mainops::reconcileTrees(const string &gene, const string &species, const st
     // Print the ordered map
     /*
     std::vector<std::string> insertOrder =  gs.getInsertionOrder();
-    std::cout << insertOrder.size()<< '\n';
+    std::cerr << insertOrder.size()<< '\n';
     for (int i = 0; i < insertOrder.size(); ++i)
     {
        const std::string &s = insertOrder[i];
-       std::cout << s << ' ' << gs.find(s) << '\n';
+       std::cerr << s << ' ' << gs.find(s) << '\n';
     }	
-
+    */
 
    /*
      std::map<std::string, std::string> gsmap =  getMapping();
     for (map<string,string>::const_iterator i = gsmap.begin(); i != gsmap.end(); i++)
     {
 
-             std::cout << i->first + "\t" + i->second + "\n" << std::endl;
+             std::cerr << i->first + "\t" + i->second + "\n" << std::endl;
 
     }
     */
@@ -298,11 +305,11 @@ void Mainops::reconcileTrees(const string &gene, const string &species, const st
     std::map<std::string, int> io_map  =  TreeIO::readGeneSpeciesOrder(mapfile);
     /*
     // To show the leaf order
-    std::cout <<"Hello size = " << io_map.size() << std::endl; 
+    std::cerr <<"Hello size = " << io_map.size() << std::endl; 
     map<string, int>::iterator it;
     for ( it = io_map.begin(); it != io_map.end(); it++ )
     {
-          std::cout << it->first  // string (key)
+          std::cerr << it->first  // string (key)
           << ':'
           << it->second          // string's value 
           << std::endl ;
@@ -331,6 +338,7 @@ void Mainops::reconcileTrees(const string &gene, const string &species, const st
 
 void Mainops::calculateCordinates()
 {
+    std::cerr << "XXX Mainops calculateCordinates called" << std::endl;	
     Host->reset();
     Guest->reset();
     //reduce crossing only if not LGT
@@ -347,6 +355,7 @@ void Mainops::calculateCordinates()
 
 int Mainops::checkValidity()
 {
+    std::cerr << "XXX Mainops checkValidity called" << std::endl;	
     if(parameters->lattransfer)
     {
         return getValidityLGT();
@@ -359,13 +368,13 @@ int Mainops::checkValidity()
 
 void Mainops::DrawTree(cairo_t *cr)
 {
-    std::cout << "5) Mainops DrawTree called" << std::endl;	
-    
-    bool heatMapMode = 1; 
+    std::cerr << "5) Mainops DrawTree called" << std::endl;	
+
+    bool heatMapMode = true;
     dt->start(parameters,Guest,Host,gamma,lambdamap,cr);
     dt->setHeatMap(heatMapMode);	
     dt->calculateTransformation();
-    
+
     
     if(parameters->do_not_draw_species_tree == false)
     {
@@ -419,11 +428,14 @@ void Mainops::DrawTree(cairo_t *cr)
 
     // Legend for heatMap here ...
     if(heatMapMode)
-	dt->createMyLegend();
+      dt->createMyLegend();
+    
 }
 
 int Mainops::RenderImage()
 {
+    std::cerr << "6) Mainops RenderImage called" << std::endl;	
+  
     bool ok = dt->RenderImage();
     dt->cleanUp();
     return ok;
@@ -431,6 +443,7 @@ int Mainops::RenderImage()
 
 Parameters* Mainops::getParameters()
 {
+  
     return parameters;
 }
 
@@ -467,7 +480,7 @@ bool Mainops::getValidityLGT()
 
 void Mainops::drawBest()
 {
-    std::cout << "4) Mainops drawBest called" << std::endl;	
+    std::cerr << "4) Mainops drawBest called" << std::endl;	
     
     CalculateGamma(); //calculation of gamma and lambda
     if(!checkValidity())
@@ -484,13 +497,15 @@ void Mainops::drawBest()
     calculateCordinates(); //calculation of the drawing cordinates
     DrawTree();  //drawing the tree
     if(!RenderImage())
-    {
-        throw AnError(": Error rendering the tree..\n");
-    } // save the file
+      {
+      	throw AnError(": Error rendering the tree..\n");
+      } // save the file
 }
 
 void Mainops::drawAllLGT()
 {
+      std::cerr << "XXX Mainops drawAllLGT called" << std::endl;	
+
     unsigned index = 0;
     std::string original_filename = parameters->outfile;
     sort(scenarios.begin(), scenarios.end());
@@ -516,6 +531,8 @@ void Mainops::drawAllLGT()
 
 void Mainops::loadPreComputedScenario(const std::string &filename,const std::string &mapname)
 {
+  std::cerr << "XXX Mainops loadPreComputedScenario called" << std::endl;	
+
     std::ifstream scenario_file;
     std::string line;
     scenario_file.open(filename.c_str(), std::ios::in);

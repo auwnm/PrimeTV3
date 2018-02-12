@@ -2,7 +2,12 @@
 # NAME AND VERSION
 ###############################################################################
 project(primetv)
-cmake_minimum_required(VERSION 2.8.9)
+
+# changed by Bengt
+cmake_minimum_required(VERSION 3.5)
+#cmake_minimum_required(VERSION 2.8.9)
+# end changed by Bengt
+
 enable_language(C)
 enable_language(CXX)
 
@@ -23,6 +28,8 @@ set(PROJECT_DOMAIN "${PROJECT_DOMAIN_FIRST}.${PROJECT_DOMAIN_SECOND}")
 
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
+  cmake_policy(SET CMP0037 NEW) # CMake 3.0
+  cmake_policy(SET CMP0025 NEW) # CMake 3.0
   if(WIN32)
     cmake_policy(SET CMP0020 NEW)
   endif(WIN32)
@@ -37,3 +44,5 @@ configure_file(${PROJECT_SOURCE_DIR}/cmake/options_cmake.h.in ${PROJECT_BINARY_D
 include_directories(${PROJECT_BINARY_DIR})
 
 add_subdirectory(src)
+
+

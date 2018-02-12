@@ -38,6 +38,7 @@ LayoutTrees::LayoutTrees(TreeExtended *r,TreeExtended *g,
 
 void LayoutTrees::start()
 {
+  std::cerr << "LayoutTrees::start()\n";
     if (parameters->ladd == 'r')
     {
         Ladderize_right();
@@ -70,10 +71,10 @@ void LayoutTrees::start()
     initPrePlaces();
     getPlace(species->getRootNode(),gene->getRootNode()); 
     std::cout << "finshed getPlace\n";
-    downwardPlaces(gene->getRootNode(),species->getRootNode(), -1);
-    std::cout << "finshed downwardPlaces\n";
+    downwardPlaces(gene->getRootNode(),species->getRootNode(), std::vector<int>(3,-1));
+    std::cout << "finished downwardPlaces\n";
     setPlaces();
-    std::cout << "finshed setPlaces\n";
+    std::cout << "finished setPlaces\n";
     
     //setLossPositions();
     
@@ -91,8 +92,15 @@ void LayoutTrees::start()
     */
 
 
+    std::vector<Node*> remainder;
+    CountGeneCoordinates(gene->getRootNode(), remainder);
+    for(vector<Node*>::reverse_iterator it = remainder.rbegin(); it != remainder.rend(); it++)
+      {
+	std::cerr << (*it)->getNumber() << " here\n";
+	AssignGeneDuplication(*it);
+      }
+    std::cerr << "where\n";
 
-    CountGeneCoordinates(gene->getRootNode());
 }
 
 
@@ -410,64 +418,76 @@ std::vector<int> LayoutTrees::getPlace (Node *x, Node *u)
       if(u->isLeaf() && x->isLeaf() && gamma->isInGamma(u, x) )  	// If u is a leaf
 	{
 	  std::cout<< "host node " << x->getNumber() << ":  guest node "<< u->getNumber() <<" is a leaf at position "<< u->getPosition();
-	  std::vector<int> ret(2, -1);
+	  
+	  std::vector<int> ret(3, -1);
+	  ret[2] = gamma->getSize(*x);
 	  ret[0] = u->getPosition();
 	  x->prePlace[u->getNumber()] = ret;
-	  std::cout << " returning " << ret[0] <<","<< ret[1] <<endl;
+	  
+	  std::cout << " returning " << ret[0] <<","<< ret[1] << ", "<<ret[2]<<endl;
+	  
 	  return ret;
 	}
       else if( gamma->isInGamma(u, x) && gamma->isSpeciation(*u) && (*lambda)[u] == x )  // If u is a speciation node
 	{
 	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a speciation node, \n";
+	  
 	  std::vector<int> lpos = getPlace ( x->getLeftChild() , u->getLeftChild()  );
-	  std::vector<int> rpos(2,-1);
-	  if(lpos != std::vector<int>(2, -1))
+	  std::vector<int> rpos(3, -1);
+	  if(lpos != std::vector<int>(3, -1))
 	    {
-	      std::cout << "host " << x->getNumber() << " guest " << u->getNumber() << "lpos = " << lpos[0] << std::endl;
 	      rpos = getPlace ( x->getRightChild() , u->getRightChild() );
-	      std::cout << "host " << x->getNumber() << " guest " << u->getNumber() << "rpos = " << rpos[0] << std::endl;
 	    }
 	  else
 	    {
 	      lpos = getPlace ( x->getRightChild() , u->getLeftChild()  );
 	      rpos = getPlace ( x->getLeftChild() , u->getRightChild() );
 	    }
-	  if(lpos == std::vector<int>(2, -1) || rpos == std::vector<int>(2, -1)) // check sanity -- This should be an assert in final version
+	  std::cout << "host node " << x->getNumber() << " guest node " << u->getNumber() << " lpos = " << lpos[0] << std::endl;
+	  std::cout << "host node " << x->getNumber() << " guest node " << u->getNumber() << " rpos = " << rpos[0] << std::endl;
+	  
+	  if(lpos == std::vector<int>(3, -1) || rpos == std::vector<int>(3, -1)) // check sanity -- This should be an assert in final version
 	    {
 	      ostringstream oss;
 	      oss << "Programming Error: getPlace(" << x->getNumber()
 		  << "," << u->getNumber() << "). "
-		  << "Inconsistency for child assumptions in speciaiton case";
+		  << "Inconsistency for child assumptions in speciation case";
 	      throw AnError(oss.str());
 	    }
 	  
 	  std::vector<int> ret = intersectChildPlaces(lpos,rpos);
+	  ret[2] = gamma->getSize(*x);
 	  x->prePlace[u->getNumber()] = ret;
-	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a speciation node, returning " << ret[0] <<"," << ret[1] << endl;	
+	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber()
+		   << " is a speciation node, returning " << ret[0] <<"," << ret[1]  << ", "<<ret[2]<< endl;	
 	  return ret; 
 	}
       else if(gamma_set.member(u->getLeftChild()) && gamma_set.member(u->getRightChild())) // u is a duplication on edge to x
 	{  
+	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber()
+		   << " is a duplication node,\n";
 	  
-	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a duplication node,\n";
 	  std::vector<int> lpos = getPlace ( x, u->getLeftChild()  );
 	  std::vector<int> rpos = getPlace ( x, u->getRightChild() );
 	  std::vector<int> ret = intersectChildPlaces(lpos,rpos);
-	  
-	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a duplication node, returning " << ret[0]<<","<<ret[1] << endl;
+	  ret[2] = gamma->getSize(*x);
+
+	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber()
+		   << " is a duplication node, returning " << ret[0]<<","<<ret[1]  << ", "<<ret[2]<< endl;
 	  
 	  return ret; 	  
 	}
       else    // for loss node
 	{
 	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a loss, \n";
-	  std::vector<int> pos(2,-1);
+	  
+	  std::vector<int> pos(3,-1);
 	  // Either lpos or rpos should return -1 since u can't map to both
 	  std::vector<int> lpos = getPlace (x->getLeftChild(), u);
 	  std::vector<int> rpos = getPlace (x->getRightChild(), u);
-	  if(lpos == std::vector<int>(2, -1))
+	  if(lpos == std::vector<int>(3, -1))
 	    {
-	      if(rpos == std::vector<int>(2, -1)) // check sanity -- this should be an assert in final version
+	      if(rpos == std::vector<int>(3, -1)) // check sanity -- this should be an assert in final version
 		{ 
 		  ostringstream oss;
 		  oss << "Programming Error: getPlace(" << x->getNumber() << "," << u->getNumber() << ")";
@@ -477,7 +497,7 @@ std::vector<int> LayoutTrees::getPlace (Node *x, Node *u)
 	    }
 	  else
 	    {
-	      if(rpos != std::vector<int>(2, -1)) // check sanity -- this should be an assert in final version
+	      if(rpos != std::vector<int>(3, -1)) // check sanity -- this should be an assert in final version
 		{ 
 		  ostringstream oss;
 		  oss << "Programming Error: getPlace(" << x->getNumber() << "," << u->getNumber() << ")";
@@ -486,133 +506,76 @@ std::vector<int> LayoutTrees::getPlace (Node *x, Node *u)
 	      pos = lpos;
 	    }
 	  
-	  x->prePlace[u->getNumber()]	= pos;
-	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a loss, returning "<< pos[0] << ","<<pos[1] << endl;
+	  x->prePlace[u->getNumber()] = pos;
+	  
+	  std::cout<< "host node " << x->getNumber() << ":  guest node " << u->getNumber() << " is a loss, returning "<< pos[0] << ","<<pos[1]  << ", "<<pos[2]<< endl;
 
 	  return pos;
 	}  
     }
   else
     {
-      return std::vector<int>(2, -1); // u is not mapped to the subtree rooted at x
+      return std::vector<int>(3, -1); // u is not mapped to the subtree rooted at x
     }
   
 }
-// Node x is a speciation node
-// Node u is a gene node  
-// int LayoutTrees::getPlace (Node *x, Node *u)
-// {
-//   SetOfNodesEx<Node> gamma_set = gamma->getFullGamma(*x);
-//   if(gamma_set.member(u)) // u is mapping to this edge
-//     {
-//       std::cout<< "host node " << x->getNumber() << " ";
-//       if(u->isLeaf() && x->isLeaf() && gamma->isInGamma(u, x) )  	// If u is a leaf
-// 	{
-// 	  std::cout<< "guest node "<< u->getNumber() <<" is a leaf at position "<< u->getPosition() << endl;
-// 	  x->prePlace[u->getNumber()] = u->getPosition();
-// 	  return u->getPosition();	
-// 	}
-//       else if( gamma->isInGamma(u, x) && gamma->isSpeciation(*u) && (*lambda)[u] == x )  // If u is a speciation node
-// 	{
-// 	  std::cout<< "guest node " << u->getNumber() << " is a speciation node." << endl;	
-	  
-// 	  int lpos = getPlace ( x->getLeftChild() , u->getLeftChild()  );
-// 	  int rpos = -1;
-// 	  if(lpos != -1)
-// 	    {
-// 	      rpos = getPlace ( x->getRightChild() , u->getRightChild() );
-// 	    }
-// 	  else
-// 	    {
-// 	      lpos = getPlace ( x->getRightChild() , u->getLeftChild()  );
-// 	      rpos = getPlace ( x->getLeftChild() , u->getRightChild() );
-// 	    }
-// 	  if(lpos == -1 || rpos == -1) // check sanity -- This should be an assert in final version
-// 	    {
-// 	      ostringstream oss;
-// 	      oss << "Programming Error: getPlace(" << x->getNumber()
-// 	  	  << "," << u->getNumber() << "). "
-// 	  	  << "Inconsistency for child assumptions in speciaiton case";
-// 	  	throw AnError(oss.str());
-// 	    }
-	  
-// 	  std::cout<< "guest node " << u->getNumber() << " lpos = " << lpos << " rpos = " << rpos << "\n";
-	  
-// 	  x->prePlace[u->getNumber()] = std::min(lpos,rpos);
-// 	  return std::min(lpos,rpos);  	
-// 	}
-//       else if(gamma_set.member(u->getLeftChild()) && gamma_set.member(u->getRightChild())) // u is a duplication on edge to x
-// 	{  
-// 	  std::cout<< "guest node " << u->getNumber() << " is a duplication node." << endl;
-// 	  int lpos = getPlace ( x, u->getLeftChild()  );
-// 	  int rpos = getPlace ( x, u->getRightChild() );
-// 	  return std::min(lpos,rpos);
-	  
-// 	}
-//       else    // for loss node
-// 	{
-// 	  std::cout<< "guest node " << u->getNumber() << " is a loss." << endl;
-	  
-// 	  int pos = -1;
-// 	  // Either lpos or rpos should return -1 since u can't map to both
-// 	  int lpos = getPlace (x->getLeftChild(), u);
-// 	  int rpos = getPlace (x->getRightChild(), u);
-// 	  if(lpos == -1)
-// 	    {
-// 	      if(rpos == -1) // check sanity -- this should be an assert in final version
-// 	  	{ 
-// 	  	  ostringstream oss;
-// 	  	  oss << "Programming Error: getPlace(" << x->getNumber() << "," << u->getNumber() << ")";
-// 	  	  throw AnError(oss.str());
-// 	  	}
-// 	      pos = rpos;
-// 	    }
-// 	  else
-// 	    {
-// 	      if(rpos != -1) // check sanity -- this should be an assert in final version
-// 	  	{ 
-// 	  	  ostringstream oss;
-// 	  	  oss << "Programming Error: getPlace(" << x->getNumber() << "," << u->getNumber() << ")";
-// 	  	  throw AnError(oss.str());
-// 	  	}
-// 	      pos = lpos;
-// 	    }	   
-	  	  
-// 	  x->prePlace[u->getNumber()]	= pos;
-// 	  return pos;
-// 	}  
-//     }
-//   else
-//     {
-//       return -1; // u is not mapped to the subtree rooted at x
-//     }
-  
-// }
+
+float
+LayoutTrees::intRatio(int x, int y)
+{
+  if(y == 0)
+    {
+      ostringstream oss;
+      oss << "Error: intRatio(int " << x << ", int " << y<<"): division by 0 attempted";
+      throw AnError(oss.str());
+    }
+  else
+    {
+      return (float)(x+1) / (float)y;
+    }
+}
+
 
 std::vector<int>
 LayoutTrees::intersectChildPlaces(std::vector<int> lpos, std::vector<int> rpos)
 {
+  std::cout << "intersectChildPlaces(["<<  lpos[0] << "," << lpos[1] << "," << lpos[2]<<"],[" <<  rpos[0] << "," << rpos[1] << "," << rpos[2] << "])\n";
   if(lpos[0] != -1 || rpos[0]!=-1) // Sanity
     {
       
       int l = -1;
       int r = -1;
-      int min = 999999999;
-      for(std::vector<int>::const_iterator i = lpos.begin(); i != lpos.end(); i++)
+      float min = 999999999;
+      for(int i = 0; i < 2; i++)
 	{
-	  if(*i != -1)
+	  if(lpos[i] != -1)
 	    {	
-	      for(std::vector<int>::const_iterator j = rpos.begin(); j != rpos.end(); j++)
+	      for(int j = 0; j < 2; j++)
 		{
-		  if(*j != -1)
+		  if(rpos[j] != -1)
 		    {
-		      int diff = std::abs(*i-*j);
-		      if(diff < min)
+		      if(lpos[i] == rpos[j])
 			{
-			  min  = diff;
-			  l = *i;
-			  r = *j;
+			  min  = 0;
+			  l = lpos[i];
+			  r = rpos[j];
 			  std::cout << "l = " << l << " r = " << r << " min = " << min << "\n";
+			}
+		      else 
+			{
+			  float adji = intRatio(lpos[i],lpos[2]);
+			  float adjj = intRatio(rpos[j], rpos[2]);
+			  float diff = std::abs(adji-adjj);
+			  std::cout << lpos[i]<<"/"<<lpos[2] <<"=" << adji << ";   "
+				    << rpos[j]<<"/"<<rpos[2] <<"=" << adjj << ";   "
+				    << "diff = "<< diff<< std::endl;
+			  if(diff < min)
+			    {
+			      min  = diff;
+			      l = lpos[i];
+			      r = rpos[j];
+			      std::cout << "l = " << l << " r = " << r << " min = " << min << "\n";
+			    }
 			}
 		    }
 		}
@@ -625,52 +588,87 @@ LayoutTrees::intersectChildPlaces(std::vector<int> lpos, std::vector<int> rpos)
       std::vector<int> ret;
       ret.push_back(l);
       ret.push_back(r);
+      ret.push_back(-1);
       return ret;
     }
   else
     {
-      return std::vector<int>(2,-1);
+      throw AnError("We should not come here! intersectChildPlaces is called with empty pairs");
+      return std::vector<int>(3,-1);
     }
 }
 
 void
-LayoutTrees::downwardPlaces(Node* u, Node* x, int prev)
+LayoutTrees::downwardPlaces(Node* u, Node* x, vector<int> prev)
 {
-  std::cout << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")" << std::endl;
+  std::cout << "downwardPlaces(guest node " << u->getNumber() <<", host node " <<x->getNumber() <<" , prev = [  " << prev[0] <<"," <<prev[1]<<"])" << std::endl;
+  
   SetOfNodesEx<Node> gamma_set = gamma->getFullGamma(*x);
   if(gamma_set.member(u)) // u is mapping to this edge
     {
-      std::cout  << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")"<< " is in gamma" << std::endl;
+      std::cout  << "downwardPlaces(guest node " << u->getNumber()
+		 <<" , host node " <<x->getNumber() <<" , prev node "
+		 << prev[0] << ") "
+		 << "is in gamma" << std::endl;
+      
       std::vector<int>& tmp = x->prePlace[u-> getNumber()];
       if(tmp[0] != -1)
 	{
 	  if(u->isLeaf() && x->isLeaf() && gamma->isInGamma(u, x) )  	// If u is a leaf
 	    {
-	      std::cout << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")"<< " a leaf, untoouched " << tmp[0] << std::endl;
+	      std::cout << "downwardPlaces(guest node " << u->getNumber()
+			<<" , host node " <<x->getNumber()
+			<<" , prev node " << prev[0]<< ") "
+			<< "a leaf, untoouched " << tmp[0] << std::endl;
 	      return;
 	    }
 	  else 
 	    {
-	      std::cout << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")" << " is in psec or loss"<< std::endl;
-	      if(prev != -1)
+	      std::cout << "downwardPlaces(guest node " << u->getNumber()
+			<<" , host node" <<x->getNumber()
+			<<" , prev node " << prev[0]<< ") "
+			<< " is in spec or loss"<< std::endl;
+
+	      if(prev != std::vector<int>(3,-1))
 		{
-		  if(std::abs(prev-tmp[1]) < std::abs(prev-tmp[0]))
+		  float adjprev = intRatio(prev[0], prev[1]);
+		  float adjlpos = intRatio(tmp[0], tmp[2]);
+		  float adjrpos = intRatio(tmp[1], tmp[2]);
+		  if(adjrpos > 0 && std::abs(adjprev-adjrpos) < std::abs(adjprev-adjlpos))
 		    {
-		      prev = tmp[1];
-		      std::reverse(tmp.begin(), tmp.end());
+		      std::cout << "downwardPlaces(guest node " << u->getNumber()
+				<<" , host node " <<x->getNumber()
+				<<" , prev node " << prev[0]<< ") "
+				<< "tmp0 = " << tmp[0] << " tmp1 = " <<tmp[1] << " change to " << tmp[1] << std::endl;
+
+		      prev[0] = tmp[1];
+		      prev[1] = tmp[2];
+		      tmp[1] = tmp[0];
+		      tmp[0] = prev[0];
 		      x->prePlace[u-> getNumber()] = tmp;
-		      std::cout << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")"<< "tmp0 = " << tmp[0] << " tmp1 = " <<tmp[1] << " change to " << tmp[0] << std::endl;
 		    }
 		  else
 		    {
-		      std::cout << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")" << " untouched " << tmp[0] << std::endl;
+		      prev[0] = tmp[0];
+		      prev[1] = tmp[2];
+		      std::cout << "downwardPlaces(guest node " << u->getNumber()
+				<<" , host node " <<x->getNumber()
+				<<" , prev node " << prev[0]<< ") "
+				<< "untouched " << tmp[0] << std::endl;
 		    }
 		}
-	      else
+	      else // This is the initial call in downwardPlaces recursion 
 		{
-		  prev = tmp[0];
-		  std::cout  << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")"<< " is on host root, untouched " << tmp[0] << std::endl;
+		  prev[0] = tmp[0]; // Always select leftmost
+		  prev[1] = tmp[2];
+		  
+		  std::cout  << "downwardPlaces(guest node " << u->getNumber()
+			     <<" , host node " <<x->getNumber()
+			     <<" , prev node " << prev[0]<< ") "
+			     << "is on host root, untouched " << tmp[0] << std::endl;
 		}
+
+	      // Send on recursion
 	      if( gamma->isInGamma(u, x) && gamma->isSpeciation(*u) && (*lambda)[u] == x )  // If u is a speciation node
 		{
 		  downwardPlaces(u->getLeftChild(), x->getLeftChild(), prev);
@@ -687,7 +685,10 @@ LayoutTrees::downwardPlaces(Node* u, Node* x, int prev)
 	}
       else
 	{
-	  std::cout  << "downwardPlaces(" << u->getNumber() <<"," <<x->getNumber() <<"," << prev<< ")"<< " is duplications " << std::endl;
+	  std::cout  << "downwardPlaces(guest node " << u->getNumber()
+		     <<" , host node " <<x->getNumber()
+		     <<" , prev node " << prev[0]<< ") "
+		     << "is duplication " << std::endl;
 
 	  downwardPlaces(u->getLeftChild(), x, prev);
 	  downwardPlaces(u->getRightChild(), x, prev);
@@ -708,23 +709,24 @@ void LayoutTrees::setPlaces()
      int sizeX = gamma->getSize(spn);
      
      nvec.clear();
-     if(showPlaces) std::cout<< " Species Node " << spn->getNumber() << " : [ ";
+     std::cout<< " Species Node " << spn->getNumber() << " : [ ";
      for (unsigned i = 0; i < gene->getNumberOfNodes(); i++) {
        int pos = spn->prePlace[i][0];
         // if( spn->prePlace[i] == -1 ) continue;
        if( pos == -1 ) continue;
-       // if(showPlaces) std::cout<< "( "<< i << ", "<< spn->prePlace[i] << ") ";  
-       if(showPlaces) std::cout<< "setPlaces()" << " host node " << x <<"( "<< i << ", "<< pos << ") " << std::endl;  
+       std::cout<< "( "<< i << ": ["<< spn->prePlace[i][0]<< ","<< spn->prePlace[i][1]<<","<< spn->prePlace[i][2] << "]) ";  
+       std::cout<< "setPlaces()" << " host node " << x <<"( "<< i << ", "<< pos << ") " << std::endl;  
         // nvec.push_back( nodeplace(i,  double(spn->prePlace[i])/sizeX) );
         nvec.push_back( nodeplace(i,  double(pos)/sizeX) );
      }
-     if(showPlaces) std::cout<< " ]" << endl;
+     std::cout<< " ]" << endl;
 
 
      // std::sort(nvec.begin(), nvec.end());
      std::stable_sort(nvec.begin(), nvec.end());
      for(std::vector<nodeplace>::size_type i = 0; i != nvec.size(); i++) {
-         spn -> setPlace(i,nvec[i].id);
+       std::cout << "setPlaces: node " << nvec[i].id << " gets place " << i << " with pos " << nvec[i].place *sizeX << "\n";
+       spn -> setPlace(i,nvec[i].id);
      }
     
   }
@@ -749,13 +751,13 @@ void LayoutTrees::AssignLeafGene(Node *n)
     if(size > 1)
     {
        int yoffset = spn->searchPlace(n->getNumber());
-
+       std::cout << "AssignLeafGene( guest "<<n->getNumber() <<"): yoffset = place = " << yoffset << "\n";
        if(yoffset == -1)
        	  yoffset = spn->getVisited();
 
-	int delta = ( 2 * NodeHeight / (size - 1) );    
+       int delta = ( 2 * NodeHeight / (size - 1) );    
+       // int delta = (  NodeHeight / (size - 1) );    
  	y = (spn->getY() + NodeHeight) - (delta * yoffset);
-		
     }
     else
     {
@@ -821,21 +823,20 @@ void LayoutTrees::AssignLeafGene(Node *n)
 }
 */
 
-void LayoutTrees::CountGeneCoordinates(Node* n)
+void LayoutTrees::CountGeneCoordinates(Node* n, std::vector<Node*>& remainder)
 {
     if(n->isLeaf())
     {
         n->setReconcilation(Leaf);
         AssignLeafGene(n);
-	
     }
     else
     {
         Node *left = n->getLeftChild();
         Node *right = n->getRightChild();
         
-        CountGeneCoordinates(left);
-        CountGeneCoordinates(right);
+        CountGeneCoordinates(left, remainder);
+        CountGeneCoordinates(right, remainder);
 
         if(gamma->isSpeciation(*n) && !gamma->isLateralTransfer(*n)) //speciation
         {
@@ -848,13 +849,16 @@ void LayoutTrees::CountGeneCoordinates(Node* n)
         }
         else //duplication
         {
-            AssignGeneDuplication(n);
+	  remainder.push_back(n);
+            // AssignGeneDuplication(n);
         }
     }
 }
 
 void LayoutTrees::AssignGeneDuplication(Node *n)
 {
+  std::cerr << "assign dup node " << n->getNumber() << " \n";
+
   Node *spb = Adress[n]; 
   double proportion = 0; 
   double delta = 0; 
@@ -878,35 +882,45 @@ void LayoutTrees::AssignGeneDuplication(Node *n)
   double ndupli = bv[spb]+1;
   unsigned duplilevel = Duplevel(n,spb->getNumber()); // I think this is the number of dups below and including n on spb
   delta = (edge/ndupli)*duplilevel;
-
-  cout << "Node " << n->getNumber() << ": ndupli = " << ndupli << ",  duplilevel = " << duplilevel << ", delta = " << delta << "and proportion = " << proportion << "\n";
   
   n->setX(spb->getX()-delta);
   
-  
-  double rightMost = RightMostCoordinate(n,spb,duplilevel);
-  double leftMost  = LeftMostCoordinate(n,spb,duplilevel);
+  vector<double> rightMost = RightMostCoordinate(n,spb,duplilevel);
+  vector<double> leftMost  = LeftMostCoordinate(n,spb,duplilevel);
+  cerr << "hej\n";
+  cout << "Node " << n->getNumber() << ": ndupli = " << ndupli << ",  duplilevel = " << duplilevel << ", delta = " << delta << ", proportion = " << proportion << ", leftMost = " << leftMost[0]-leftMost[1] << " and rightMost =  " << rightMost[0] -rightMost[1]<< "\n";
+
 
   if(spb->isRoot())
     {
-      n->setY( leftMost +  (proportion * delta) );
+      n->setY( leftMost[0] +  (proportion * delta) );
     }
   else
     {
-      double leftChildPlace = getRightMostChildPlace(n->getLeftChild(),spb);
-      double rightChildPlace = getLeftMostChildPlace(n->getRightChild(),spb);
-      double parentPlace = getParentPlace(n, spb->getParent());
+      vector<double> parentMost = getParentCoordinate(n, spb->getParent()); 
+      // double leftChildPlace = leftMost; //getRightMostChildPlace(n->getLeftChild(),spb);
+      // std::cout << "leftChildPlace = " << leftChildPlace << "\n";
+      // double rightChildPlace = rightMost; //getLeftMostChildPlace(n->getRightChild(),spb);
+      // std::cout << "rightChildPlace = " << rightChildPlace << "\n";
+      // double parentPlace = n->getParent()->getY(); //getParentPlace(n, spb->getParent());
+      // std::cout << "parentPlace = " << parentPlace << "\n";
+      double leftChildPlace = leftMost[0] - leftMost[1]; //getRightMostChildPlace(n->getLeftChild(),spb);
+      std::cout << "leftChildPlace = " << leftChildPlace << "\n";
+      double rightChildPlace = rightMost[0] -rightMost[1]; //getLeftMostChildPlace(n->getRightChild(),spb);
+      std::cout << "rightChildPlace = " << rightChildPlace << "\n";
+      double parentPlace = parentMost[0] - parentMost[1];
+      std::cout << "AssignGeneDuplication(guest Node "<<n->getNumber()<<"): parentPlace = [" << parentMost[0] << " - "  << parentMost[1] << "] = " << parentPlace << "\n";
       
-      
+
       if(abs(rightChildPlace - parentPlace) < abs(leftChildPlace - parentPlace))
 	{
-	  cout << "AssignGeneDuplication(guest Node " << n->getNumber() << ") with host node "<< spb->getNumber() << ": leftChildPlace = " << leftChildPlace << ",  rightChildPlace = " << rightChildPlace << ", parentPlace(" << n->getNumber() <<","<<spb->getParent()->getNumber() << " = " << parentPlace << " chose rightChild" <<std::endl;
-	  n->setY( rightMost +  (proportion * delta) );
+	  cout << "AssignGeneDuplication(guest Node " << n->getNumber() << ") with host node "<< spb->getNumber() << ": leftChildPlace = " << leftChildPlace << ",  rightChildPlace = " << rightChildPlace << ", parentPlace(" << n->getNumber() <<","<<spb->getParent()->getNumber() << ") = " << parentPlace << " choose rightChild; setY to " <<rightMost[0] +  (proportion * delta) <<std::endl;
+	  n->setY( rightMost[0] +  (proportion * delta) );
 	}
       else
 	{
-	  cout << "AssignGeneDuplication(guest Node " << n->getNumber() << ") with host node "<< spb->getNumber() << ": leftChildPlace = " << leftChildPlace << ",  rightChildPlace = " << rightChildPlace << ", parentPlace(" << n->getNumber() <<","<<spb->getParent()->getNumber() << " = " << parentPlace << " chose leftChild" <<std::endl;
-	  n->setY( leftMost +  (proportion * delta) ); 
+	  cout << "AssignGeneDuplication(guest Node " << n->getNumber() << ") with host node "<< spb->getNumber() << ": leftChildPlace = " << leftChildPlace << ",  rightChildPlace = " << rightChildPlace << ", parentPlace(" << n->getNumber() <<","<<spb->getParent()->getNumber() << " = " << parentPlace << " choose leftChild; setY to " << leftMost[0] +  (proportion * delta) <<std::endl;
+	  n->setY( leftMost[0] +  (proportion * delta) ); 
 	} 
     }    
   // n->setY( ((rightMost + leftMost) /2) +  (proportion * delta) );
@@ -916,6 +930,7 @@ void LayoutTrees::AssignGeneDuplication(Node *n)
   
   n->setReconcilation(Duplication);
   n->setHostChild(spb);
+
 }
 
 void LayoutTrees::AssignGeneLGT(Node *n)
@@ -1024,16 +1039,19 @@ LayoutTrees::Duplevel(Node* nd, int levellineage)
     }
 }
 
-// This shuld return the leftmost y-coordinate of o or any descendant of o at the vertex end-of_slice
-double 
-LayoutTrees::LeftMostCoordinate(Node* o, Node *end_of_slice, int duplevel)
+// This shuld return the leftmost y-coordinate of u or any descendant of u at the vertex end-of_slice
+vector<double>
+LayoutTrees::LeftMostCoordinate(Node* u, Node *end_of_slice, int duplevel)
 {
-    if (gamma->isSpeciation(*o))
+  vector<double> ret;
+  std::cout << ":LeftMostCoordinate  guest " << u->getNumber() << ", host " <<  end_of_slice->getNumber() << ", duplevel " << duplevel << ")\n";
+    if (gamma->isSpeciation(*u))
     {
-      if(gamma->getLowestGammaPath(*o) != end_of_slice)  
+      if(gamma->getLowestGammaPath(*u) != end_of_slice)  
         {
 	  // we should use searchPlaces here
-	  return getYforLosses(o, end_of_slice);
+	  std::cout << "LeftMostCoordinate: speciation calling getYforLosses( guest " << u->getNumber() << ", end_of_slice " << end_of_slice->getNumber() << ")\n";
+	  return getYforLosses(u, end_of_slice);
 
 	  // double size = gamma->getSize(end_of_slice);
 	  // double delta = NodeHeight / size - 1;
@@ -1042,19 +1060,25 @@ LayoutTrees::LeftMostCoordinate(Node* o, Node *end_of_slice, int duplevel)
         }
         else
         {
-            return o->getY();
+	  std::cout << "LeftMostCoordinate: speciation returning " << u->getNumber() << ".getY = " <<u->getY() << "\n";
+	  ret.push_back(u->getY());
+	  ret.push_back(end_of_slice->getY() - NodeHeight/2);
+	  return ret;
+	  // return u->getY();
         }
     }
     else
     {
-        if (end_of_slice == Adress[o])
+        if (end_of_slice == Adress[u])
         {
-            return LeftMostCoordinate(o->getLeftChild(), end_of_slice,duplevel);
+	  std::cout << "LeftMostCoordinate: duplication recursing down\n";
+            return LeftMostCoordinate(u->getLeftChild(), end_of_slice,duplevel);
         }
         else
         {
 	  // we should use searchPlaces here
-	  return getYforLosses(o, end_of_slice);
+	  std::cout << "LeftMostCoordinate: duplication calling getYforLosses( guest " << u->getNumber() << ", end_of_slice " << end_of_slice->getNumber() << ")\n";
+	  return getYforLosses(u, end_of_slice);
 
 	  // double size = gamma->getSize(end_of_slice);
           //   double delta = NodeHeight / size - 1;
@@ -1065,16 +1089,19 @@ LayoutTrees::LeftMostCoordinate(Node* o, Node *end_of_slice, int duplevel)
 }
 
 
-// This shuld return the right most y-coordinate of o or any descendant of o at the vertex end-of_slice
-double
-LayoutTrees::RightMostCoordinate (Node* o, Node *end_of_slice, int duplevel)
+// This should return the right most y-coordinate of u or any descendant of u at the vertex end-of_slice
+vector<double>
+LayoutTrees::RightMostCoordinate (Node* u, Node *end_of_slice, int duplevel)
 {
-    if (gamma->isSpeciation(*o))
+  vector<double> ret;
+  std::cout << ":RightMostCoordinate  guest " << u->getNumber() << ", host " <<  end_of_slice->getNumber() << ", duplevel " << duplevel << ")\n";
+    if (gamma->isSpeciation(*u))
     {
-      if(gamma->getLowestGammaPath(*o) != end_of_slice) // o loss at end-of-slice
+      if(gamma->getLowestGammaPath(*u) != end_of_slice) // u loss at end-of-slice
         {
 	  // we should use searchPlaces here
-	  return getYforLosses(o, end_of_slice);
+	  std::cout << "RightMostCoordinate: speciation calling getYforLosses( guest " << u->getNumber() << ", end_of_slice " << end_of_slice->getNumber() << ")\n";
+	  return getYforLosses(u, end_of_slice);
 	  
             // double size = gamma->getSize(end_of_slice);
             // double delta = NodeHeight / size - 1;
@@ -1083,19 +1110,26 @@ LayoutTrees::RightMostCoordinate (Node* o, Node *end_of_slice, int duplevel)
         }
         else
         {
-            return o->getY();
+	  std::cout << "RightMostCoordinate: speciation returning " << u->getNumber() << ".getY = " <<u->getY() << "\n";
+	  ret.push_back(u->getY());
+	  ret.push_back(end_of_slice->getY() - NodeHeight/2);
+	  return ret;
+	  // return u->getY();
         }
     }
     else
     {
-      if (end_of_slice == Adress[o]) // There must be a node below o in end_of_slice edge
+      if (end_of_slice == Adress[u]) // There must be a node below u in end_of_slice edge
         {
-            return RightMostCoordinate(o->getRightChild(), end_of_slice,duplevel);
+	  std::cout << "RightMostCoordinate: duplication recursing down\n";
+	  
+            return RightMostCoordinate(u->getRightChild(), end_of_slice,duplevel);
         }
-      else // o loss at end-of-slice
+      else // u loss at end-of-slice
         {
 	  // we should use searchPlaces here
-	  return getYforLosses(o, end_of_slice);
+	  std::cout << "RightMostCoordinate: duplication calling getYforLosses( guest " << u->getNumber() << ", end_of_slice " << end_of_slice->getNumber() << ")\n";
+	  return getYforLosses(u, end_of_slice);
 	  
 	  // double size = gamma->getSize(end_of_slice);
 	  // double delta = NodeHeight / size - 1;
@@ -1109,13 +1143,16 @@ LayoutTrees::RightMostCoordinate (Node* o, Node *end_of_slice, int duplevel)
 double
 LayoutTrees::getLeftMostChildPlace(Node* u, Node *x)
 {
+  std::cout << "getLeftMostChildPlace(guest " << u->getNumber() << ", host " <<x->getNumber() << ")\n";
   int p = x->searchPlace(u->getNumber());
-  if(p == -1)
+  if(p == -1) // u is not a speciation at x, i.e., u is either a loss at x or a duplication appearing above x
     {
       return double(getLeftMostChildPlace(u->getLeftChild(), x))/gamma->getSize(x);
     }
   else
     {
+      // p=p+1;
+      std::cout << "getLeftMostChildPlace(guest "<<u->getNumber() << ", host " << x->getNumber() << ") = " <<p<< " / " << gamma->getSize(x) << " = " << double(p)/gamma->getSize(x) <<"\n";
       return double(p)/gamma->getSize(x);
     }
 }
@@ -1124,6 +1161,7 @@ LayoutTrees::getLeftMostChildPlace(Node* u, Node *x)
 double
 LayoutTrees::getRightMostChildPlace(Node* u, Node *x)
 {
+  std::cout << "getRightMostChildPlace(guest " << u->getNumber() << ", host " <<x->getNumber() << ")\n";
   int p = x->searchPlace(u->getNumber());
   if(p == -1)
     {
@@ -1131,6 +1169,8 @@ LayoutTrees::getRightMostChildPlace(Node* u, Node *x)
     }
   else
     {
+      // p=p+1;
+      std::cout << "getRightMostChildPlace(guest "<<u->getNumber() << ", host " << x->getNumber() << ") = " <<p<< " / " << gamma->getSize(x) << " = " << double(p)/gamma->getSize(x) <<"\n";
       return double(p)/gamma->getSize(x);
     }
 }
@@ -1138,7 +1178,7 @@ LayoutTrees::getRightMostChildPlace(Node* u, Node *x)
 // This shuld return the y-coordinate of u or the closest parent of u mapping at vertex x
 double
 LayoutTrees::getParentPlace(Node* u, Node *x)
-{
+{	
   int p = x->searchPlace(u->getNumber());
   if(p == -1)
     {
@@ -1156,34 +1196,90 @@ LayoutTrees::getParentPlace(Node* u, Node *x)
     }
   else
     {
+      // p=p+1;
       double ret = double(p)/gamma->getSize(x);
       std::cout << "getParentPlace(" << u->getNumber()<< ";" << x->getNumber() << ") = " <<p  << "/" << gamma->getSize(x)<< " = " << ret << "\n";
       return ret; // double(p)/gamma->getSize(x);
     }
 }
 
+// This shuld return the y-coordinate of u or the closest parent of u mapping at vertex x
+vector<double>
+LayoutTrees::getParentCoordinate(Node* u, Node *x)
+{
+  std:: cout << "LayoutTrees::getParentCoordinate( guest Node " << u->getNumber() << ", host Node " << x->getNumber() << ")\n";
+    
+  SetOfNodesEx<Node> gamma_set = gamma->getFullGamma(*x);
+  if(gamma_set.member(u)) // u is mapping to this edge
+    {
+      vector<double> ret;
+      if( gamma->isInGamma(u, x) && gamma->isSpeciation(*u) && (*lambda)[u] == x )  // If u is a speciation node
+	{
+	  ret.push_back(u->getY());
+	  ret.push_back(x->getY()-NodeHeight/2);
+	  cout << "LayoutTrees::getParentCoordinate( guest Node " << u->getNumber() << ", host Node " << x->getNumber() << ") returning [" << u->getY()<< ", "<<x->getY() - NodeHeight/2 <<"]\n";
+	  return(ret);
+	}
+      else
+	{
+	  if(u->isRoot())
+	    {
+	      ret.push_back(-1);
+	      ret.push_back(x->getY() - NodeHeight/2);
+	      return ret;
+	    }
+	  else
+	    {
+	      return getParentCoordinate(u->getParent(), x);
+	    }
+	}
+    }
+  else
+    {
+      return getParentCoordinate(u->getParent(), x);
+      // ostringstream oss;
+      // oss << "Error: getParentCoordinate(guest Node " << u->getNumber() << ", host Node " << x-> << ")\n"
+      // 	  << "u is not in gamma of x!";
+      // throw AnError(oss);
+    }
+}
+
 
 // This returns the y-ccordinate of a loss u at x
-double
+vector<double>
 LayoutTrees::getYforLosses(Node* u, Node *x)
 {
+
+  std::cout << "getYforLosses(Node "<< u->getNumber() << ", Node " << x->getNumber() << ")\n";
   int y = -1;
   double size = gamma->getSize(x);
   if(size > 1)
     {
-      double delta = NodeHeight / size - 1;
+      double delta = (2 * NodeHeight / (size - 1));
+      // double delta = ( NodeHeight / (size - 1));
       int yoffset = x->searchPlace(u->getNumber());
       
       if(yoffset == -1) //needed?
 	yoffset = x->getVisited();
-      
-      y = (x->getY() + NodeHeight/2) - (delta * yoffset);
+      // y = (x->getY() + NodeHeight/2) - (delta * yoffset);
+      y = (x->getY() + NodeHeight) - (delta * yoffset);
+      std::cout << "getYforLosses: yoffset = " << yoffset
+		<< " delta = " << delta
+		<< " NodeHeight = " << NodeHeight
+		<< " size = " << size
+		<< " ybase = " << x->getY()
+		<< " y = " << y << "\n";
     }
   else
     {
       y = x->getY();
+      std::cout << "getYforLosses:  y = " << y << "\n";
     }
-  return y;
+  vector<double> ret;
+  ret.push_back(y);
+  ret.push_back(x->getY() - NodeHeight/2);
+  return ret;
+  // return y;
 }
 
 
@@ -1191,7 +1287,6 @@ double LayoutTrees::getNodeHeight()
 {
     return NodeHeight;
 }
-
 int
 LayoutTrees::Ladderize_left() 
 {

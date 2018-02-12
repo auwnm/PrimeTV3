@@ -67,7 +67,7 @@ void DrawTreeCairo::start(const Parameters *p, TreeExtended *g, TreeExtended *s,
     gamma = ga;
     config = parameters->colorConfig;
     lambda = la;
-
+    
     //change the dimensions according to the oriantation
     if(parameters->horiz)
     {
@@ -93,46 +93,52 @@ void DrawTreeCairo::start(const Parameters *p, TreeExtended *g, TreeExtended *s,
     //create the surface according to the format given
     if(parameters->format.compare("pdf") == 0)
     {
-        surface = cairo_pdf_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".pdf"), 
-                                            pagewidth - parameters->separation/2, pageheight - parameters->separation/2);
-        surfaceBackground = cairo_pdf_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".pdf"), pagewidth, pageheight);
-        
+      // The original surface_cairo_pdf_surface_create... , when rendered together with surfaceBackground, produced rasterized figs instead of vector-based, at least on MacOSX 10.13 and CentOS 7. Using surface = cairo_recording_surface_create... solves this problem. SHould probably be implmented also for other formats (ps, svg, etc) below.
+      surface = cairo_recording_surface_create(CAIRO_CONTENT_COLOR_ALPHA, NULL);
+      // surface = cairo_pdf_surface_create ("tmp.pdf", //strcat(strcpy(str,parameters->outfile.c_str()),".pdf"), 
+      // 					  pagewidth - parameters->separation/2, pageheight - parameters->separation/2);
+      surfaceBackground = cairo_pdf_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".pdf"),
+       						    pagewidth, pageheight); 
     }
     else if(parameters->format.compare("ps") == 0)
-    {
-        surface = cairo_ps_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".ps"), 
-                                        pagewidth - parameters->separation/2, pageheight - parameters->separation/2);
-        surfaceBackground = cairo_ps_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".ps"), pagewidth, pageheight);
-        
-    }
+      {
+	surface = (cairo_surface_t *) cairo_ps_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".ps"), 
+							       pagewidth - parameters->separation/2, pageheight - parameters->separation/2);
+	surfaceBackground = (cairo_surface_t *) cairo_ps_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".ps"),
+									 pagewidth, pageheight);
+	
+      }
     else if(parameters->format.compare("svg") == 0)
-    {
+      {
         surface = cairo_svg_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".svg"), 
                                             pagewidth - parameters->separation/2, pageheight - parameters->separation/2);
         surfaceBackground = cairo_svg_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".svg"), pagewidth, pageheight);
-    }
+      }
     else if(parameters->format.compare("jpg") == 0 or parameters->format.compare("png") == 0)
-    {
+      {
         image = true;
         surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, pagewidth - parameters->separation/2, pageheight - parameters->separation/2);
         surfaceBackground = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, pagewidth, pageheight);
-    }
+      }
     else
-    {
+      {
         surface = cairo_pdf_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".pdf"), 
                                             pagewidth - parameters->maxLeafNameSize, pageheight - parameters->maxLeafNameSize);
         surfaceBackground = cairo_pdf_surface_create (strcat(strcpy(str,parameters->outfile.c_str()),".pdf"), pagewidth, pageheight);
-    }
-        
+      }
+    
     //if the cairo object has been given as inputs
-    if(!cr_)   
+    if(!cr_)
     {
         cr = cairo_create (surface); 
+	std::cerr << "creating cairo object \n";
     }
     else
     {
         this->cr = cr_;
+	std::cerr << "Uses an existing cairo object \n";
     }
+
     pageheight -= parameters->separation;
     pagewidth -= parameters->separation;
     //font size and colour
@@ -150,11 +156,9 @@ void DrawTreeCairo::start(const Parameters *p, TreeExtended *g, TreeExtended *s,
     cairo_set_source_rgba (cr, 1, 1, 1,1);
     cairo_set_line_width (cr, linewidth);
     cairo_paint(cr);
-
-
+    
     // ///////7
     heatMapMode = 1; 				
-
 }
 
 void DrawTreeCairo::cleanUp()
@@ -168,7 +172,6 @@ void DrawTreeCairo::cleanUp()
     if(surface)
     {
         cairo_surface_destroy(surface);
-
     }
     surface = 0;
 
@@ -208,30 +211,34 @@ void DrawTreeCairo::setHeatMap(bool flag)
 
 int DrawTreeCairo::RenderImage()
 {
-    
     if(image)
     {
-        char str[80];
-        
-        if( parameters->format.compare("png") == 0 )
+      std::cerr << "RenderImage: image = true\n";
+      char str[80];
+      
+      if( parameters->format.compare("png") == 0 )
         {
-            cairo_status_t e = cairo_surface_write_to_png (surface, strcat(strcpy(str,parameters->outfile.c_str()),".png"));
-            if (!e == CAIRO_STATUS_SUCCESS )
+	  cairo_status_t e = cairo_surface_write_to_png (surface, strcat(strcpy(str,parameters->outfile.c_str()),".png"));
+	  if (!(e == CAIRO_STATUS_SUCCESS ))
             {
-                throw AnError("Could not write file!\n", 1);
-                return 0;
+	      throw AnError("Could not write file!\n", 1);
+	      return 0;
             }
         }
-        else if ( parameters->format.compare("jpg") == 0 )
+      else if ( parameters->format.compare("jpg") == 0 )
         {
-            //TODO what to do here??
-            
-            //cairo_status_t e = cairo_surface_write_to_jpg (surface, strcat(strcpy(str,parameters->outfile.c_str()),".jpg"));
-            //if (!e == CAIRO_STATUS_SUCCESS )
-            //throw AnError("Could not write file!\n", 1);
+	  //TODO what to do here??
+          
+	  //cairo_status_t e = cairo_surface_write_to_jpg (surface, strcat(strcpy(str,parameters->outfile.c_str()),".jpg"));
+	  //if (!e == CAIRO_STATUS_SUCCESS )
+	  //throw AnError("Could not write file!\n", 1);
         }    
     }
-
+    else
+      {
+	std::cerr << "RenderImage: image = false\n";
+      }
+    
     cr = cairo_create(surfaceBackground);
 
     //TODO calling the same for horizontal and vertical??
@@ -1137,6 +1144,8 @@ void DrawTreeCairo::newDrawPath(Node *n)
     Node *destiny = n->getParent()->getHostChild();
     Node *nparent = n->getParent();
 
+  std::cout << "newDrawPath(Node " << n->getNumber() << ") origin = " << origin->getNumber() << "  destiny = " << destiny->getNumber() << "  nparent = " << nparent->getNumber() << "\n";
+
 
     //when there is a LGT in between we have to draw the path
     //until the next speciation or duplication node or LT node
@@ -1186,6 +1195,11 @@ void DrawTreeCairo::newDrawPath(Node *n)
             
            xend = nparent->getX();
            yend = nparent->getY();
+	   std::cout << "newDrawPath(Node " << n->getNumber()
+		     << "): final o = " << o->getNumber()
+		     << " yorigin = " << yorigin
+		     << " yend = " << yend
+		     << "\n";
            addEdge(o,destiny,n,nparent,xorigin,yorigin,xend,yend,Edge::Normal);
            xorigin = nparent->getX();
            yorigin = nparent->getY();
@@ -1233,15 +1247,28 @@ void DrawTreeCairo::newDrawPath(Node *n)
                 */
                
                 yoffset = spnode->searchPlace( n->getNumber() );
+		std::cout << "yoffset = " << yoffset << "\n"; 
                 
-		//yoffset = -1;
                 if(yoffset == -1)
-       	  	   yoffset = spnode->getVisited();
-
+		  {
+		    std::cout << "yoffset = -1\n"; 
+		    yoffset = spnode->getVisited();
+		  }
 			
                         
-                int delta = ( 2 * leafWidth / (size - 1)  );
+                // int delta = ( leafWidth / (size - 1)  );
+                double delta = ( 2 * leafWidth / (size - 1)  );
                 y = (o->getParent()->getY() + leafWidth) - ( delta * yoffset ); 
+		std::cout << "newDrawPath(Node " << n->getNumber()
+			  << "): non-final iter o = " << o->getNumber()
+			  << " spnode = " << spnode->getNumber()
+			  << " yoffset = " << yoffset
+			  << " delta = " << delta
+			  << " leafWidth = " << leafWidth
+			  << " size = " << size
+			  << " ybase = " << o->getParent()->getY() 
+			  << " y = " << y
+			  << "\n";
             }
                       
            
@@ -1250,6 +1277,11 @@ void DrawTreeCairo::newDrawPath(Node *n)
 	    cairo_line_to(cr,x,y);
 	    xend = x;
             yend = y;
+	   std::cout << "newDrawPath(Node " << n->getNumber()
+		     << "): non-final o = " << o->getNumber()
+		     << " yorigin = " << yorigin
+		     << " yend = " << yend
+		     << "\n";
             addEdge(o,destiny,n,nparent,xorigin,yorigin,xend,yend,Edge::Normal);
             xorigin = x;
             yorigin = y;
@@ -1266,6 +1298,11 @@ void DrawTreeCairo::newDrawPath(Node *n)
     {   
          cairo_set_source_rgba(cr,edgeColor.red,edgeColor.green,edgeColor.blue,1);
          cairo_line_to(cr,nparent->getX(),nparent->getY());
+	   std::cout << "newDrawPath(Node " << n->getNumber()
+		     << "): final o = " << o->getNumber()
+		     << " yorigin = " << yorigin
+		     << " yend = " << nparent->getY()
+		     << "\n";
          addEdge(o,destiny,n,n->getParent(),xorigin,yorigin,nparent->getX(),nparent->getY(),Edge::Normal);
     }
  
@@ -1275,58 +1312,58 @@ void DrawTreeCairo::newDrawPath(Node *n)
 
 void DrawTreeCairo::DrawGeneHeatNodes()
 {
-    
-    double red,green,blue;
-    cairo_set_line_width(cr,2);
-        
-    for ( Node *n = gene->preorder_begin(); n != NULL; n = gene->preorder_next(n) )
+  
+  double red,green,blue;
+  cairo_set_line_width(cr,2);
+  
+  for ( Node *n = gene->preorder_begin(); n != NULL; n = gene->preorder_next(n) )
     {
-        double x = n->getX();
-        double y = n->getY();
-        Color hColor = getHeatMapColor(n->getLength());            
-        
-        /*
-        //////////////////////////// just to color code
-        int nodeList [8] = {159,142,61,30,97,111,170,112};          
-        for(int i=0 ; i<8; i++ ) {
-               
-               if(n->isRoot())
-                  break; 
-
-               if( n->getNumber() == nodeList[i] || n->getParent()->getNumber() == nodeList[i]  ) {
-                   hColor = Color(0, 0, 0, "black");  
-                   break;
-                }  
-        }
-        //////////////////////////
-        */
-
-   if(n->getReconcilation() == Leaf || n->getReconcilation() == Speciation ) //speciation or leaf
-    {
-        double s = leafwidth_spe_scale;        
-	cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
-	cairo_rectangle(cr,x-(leafWidth/s)/2,y-(leafWidth/s)/2,leafWidth/s,leafWidth/s);        
-	cairo_fill(cr);
+      double x = n->getX();
+      double y = n->getY();
+      Color hColor = getHeatMapColor(n->getLength());            
+      std::cout << "DrawGeneHeatNodes(): node " << n->getNumber() << ": x = " << x << " y = " << y << "\n";
+      /*
+      //////////////////////////// just to color code
+      int nodeList [8] = {159,142,61,30,97,111,170,112};          
+      for(int i=0 ; i<8; i++ ) {
+      
+      if(n->isRoot())
+      break; 
+      
+      if( n->getNumber() == nodeList[i] || n->getParent()->getNumber() == nodeList[i]  ) {
+      hColor = Color(0, 0, 0, "black");  
+      break;
+      }  
+      }
+      //////////////////////////
+      */
+      
+      if(n->getReconcilation() == Leaf || n->getReconcilation() == Speciation ) //speciation or leaf
+	{
+	  double s = leafwidth_spe_scale;        
+	  cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
+	  cairo_rectangle(cr,x-(leafWidth/s)/2,y-(leafWidth/s)/2,leafWidth/s,leafWidth/s);        
+	  cairo_fill(cr);
+	}
+      else if (n->getReconcilation() == Duplication) //duplication
+	{
+	  nDupl++;
+	  double d = leafwidth_dup_scale;
+	  cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
+	  cairo_arc(cr,x, y, leafWidth/d,0.0,2*pi);        
+	  cairo_fill(cr);
+	}	
+      else if (n->getReconcilation() == LateralTransfer) //duplication
+	{
+	  nTrans++;
+	  cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
+	  cairo_rectangle(cr,x-(leafWidth/5)/2,y-(leafWidth/5)/2,leafWidth/5,leafWidth/5);
+	  cairo_fill(cr);        
+	}
     }
-    else if (n->getReconcilation() == Duplication) //duplication
-    {
-	nDupl++;
-	double d = leafwidth_dup_scale;
-	cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
-	cairo_arc(cr,x, y, leafWidth/d,0.0,2*pi);        
-        cairo_fill(cr);
-    }	
-    else if (n->getReconcilation() == LateralTransfer) //duplication
-    {
-        nTrans++;
-        cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
-        cairo_rectangle(cr,x-(leafWidth/5)/2,y-(leafWidth/5)/2,leafWidth/5,leafWidth/5);
-        cairo_fill(cr);        
-    }
-}
-    
-cairo_stroke(cr);
-
+  
+  cairo_stroke(cr);
+  
 }
 
 
@@ -1416,7 +1453,8 @@ void DrawTreeCairo::newLGTPath(Node *n)
         
             if (size > 1)
             {
-                double delta = leafWidth / (size - 1);
+                // double delta = leafWidth / (size - 1);
+	      double delta = ( 2* leafWidth / (size - 1) );
                 y = (o->getParent()->getY() - leafWidth/2) + ((o->getParent()->getVisited()) * delta);
             }
             

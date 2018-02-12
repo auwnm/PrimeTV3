@@ -19,7 +19,7 @@
  Author : Jose Fernandez Navarro  -  jc.fernandez.navarro@gmail.com
  */
 
-#include <QtTest/QTest>
+##include <QtTest/QTest>
 
 // unit test lib
 #include "TestSuite.h"
@@ -31,8 +31,8 @@ using namespace unit;
 
 int main(int argc, char **argv)
 {
-    Q_UNUSED(argc);
-    Q_UNUSED(argv);
+ #   Q_UNUSED(argc);
+ #   Q_UNUSED(argv);
 
     //QApplication::setApplicationName("stVi_unittest");
 
