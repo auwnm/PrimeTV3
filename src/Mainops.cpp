@@ -58,6 +58,7 @@ void Mainops::cleanTrees()
         delete(Guest);
     }
     Guest = 0;
+    
 
     if(Host)
     {

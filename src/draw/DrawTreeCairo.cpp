@@ -81,6 +81,7 @@ void DrawTreeCairo::start(const Parameters *p, TreeExtended *g, TreeExtended *s,
     }
 
     leafWidth = parameters->leafwidth;
+    cerr << "leafWith = " << leafWidth << endl;
     leafwidth_spe_scale =  parameters->leafwidth_spe_scale;
     leafwidth_dup_scale =  parameters->leafwidth_dup_scale;
           	
@@ -821,10 +822,11 @@ void DrawTreeCairo::DrawGeneNodes()
     Color& specCol = config->gene_spec_color;
 
     
-    if(heatMapMode) {
+    if(heatMapMode)
+      {
         DrawGeneHeatNodes();
         return; 
-    }
+      }
     
     cairo_set_line_width(cr,2);
         
@@ -1144,14 +1146,14 @@ void DrawTreeCairo::newDrawPath(Node *n)
     Node *destiny = n->getParent()->getHostChild();
     Node *nparent = n->getParent();
 
-  std::cout << "newDrawPath(Node " << n->getNumber() << ") origin = " << origin->getNumber() << "  destiny = " << destiny->getNumber() << "  nparent = " << nparent->getNumber() << "\n";
+    std::cout << "newDrawPath(Node " << n->getNumber() << ") origin = " << origin->getNumber() << "  destiny = " << destiny->getNumber() << "  nparent = " << nparent->getNumber() << "\n";
 
 
     //when there is a LGT in between we have to draw the path
     //until the next speciation or duplication node or LT node
     if(n->getParent()->getReconcilation() == LateralTransfer 
-        && ((*lambda)[n] == (*lambda)[n->getParent()]) && !destinyLGT(n))
-    {
+       && ((*lambda)[n] == (*lambda)[n->getParent()]) && !destinyLGT(n))
+      {
         destiny = n->getHostParent();
         nparent = getHighestMappedLGT(n);
     }
@@ -1248,7 +1250,7 @@ void DrawTreeCairo::newDrawPath(Node *n)
                
                 yoffset = spnode->searchPlace( n->getNumber() );
 		std::cout << "yoffset = " << yoffset << "\n"; 
-                
+		
                 if(yoffset == -1)
 		  {
 		    std::cout << "yoffset = -1\n"; 
@@ -1257,8 +1259,9 @@ void DrawTreeCairo::newDrawPath(Node *n)
 			
                         
                 // int delta = ( leafWidth / (size - 1)  );
-                double delta = ( 2 * leafWidth / (size - 1)  );
-                y = (o->getParent()->getY() + leafWidth) - ( delta * yoffset ); 
+                int delta = ( 2 * leafWidth / (size - 1)  );
+                y = (spnode->getY() + leafWidth) - ( delta * yoffset ); 
+                // y = (o->getParent()->getY() + leafWidth) - ( delta * yoffset ); 
 		std::cout << "newDrawPath(Node " << n->getNumber()
 			  << "): non-final iter o = " << o->getNumber()
 			  << " spnode = " << spnode->getNumber()
@@ -1288,9 +1291,6 @@ void DrawTreeCairo::newDrawPath(Node *n)
         }
         // Calling order matters ....    
 	// cairo_stroke(cr);
-
-	
-
     }
    
     //we draw an extra edge if the destiny is a duplication
@@ -1353,7 +1353,7 @@ void DrawTreeCairo::DrawGeneHeatNodes()
 	  cairo_arc(cr,x, y, leafWidth/d,0.0,2*pi);        
 	  cairo_fill(cr);
 	}	
-      else if (n->getReconcilation() == LateralTransfer) //duplication
+      else if (n->getReconcilation() == LateralTransfer) //LGT
 	{
 	  nTrans++;
 	  cairo_set_source_rgba(cr, hColor.red, hColor.green, hColor.blue, 1);
